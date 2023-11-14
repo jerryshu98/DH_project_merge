@@ -8,11 +8,13 @@ data_basic = './data/gender_race_admission_type_charttime_fio2_plateaupressure.c
 data_basic2 = './data/basic_data2.csv'
 data_O2 = './data/O2_flow.csv'
 data_vet = './data/ventailation_data.csv'
+data_GT = './data/ground_truth_meta_data.csv'
 
 data_basic_datalist = pd.read_csv(data_basic)
 data_basic2_datalist = pd.read_csv(data_basic2)
 data_O2_datalist = pd.read_csv(data_O2)
 data_vet_datalist = pd.read_csv(data_vet)
+data_GT_datalist = pd.read_csv(data_GT)
 
 df = data_vet_datalist
 df['charttime'] = pd.to_datetime(df['charttime'])
@@ -54,13 +56,21 @@ df_resampled2 = df_resampled2.reset_index()
 df_resampled2['subject_id'] = df_resampled2.groupby('stay_id')['subject_id'].fillna(method='ffill')
 
 df3 = data_basic2_datalist
+df4 = pd.DataFrame()
+df4['subject_id']= data_GT_datalist['subject_id']
+df4['stay_id'] = data_GT_datalist['stay_id']
+df4['label'] = data_GT_datalist['label']
+df4 = df4.drop_duplicates()
+
 df_merged = pd.merge(df_resampled2, df3, on=['stay_id', 'subject_id'], how='inner')
 df_merged = pd.merge(df_merged, df_resampled1, on=['stay_id', 'subject_id', 'charttime'], how='inner')
 df_merged = pd.merge(df_merged, df_resampled, on=['stay_id', 'subject_id', 'charttime'], how='inner')
+df_merged['RSBI'] = df_merged['tidal_volume_observed']/df_merged['respiratory_rate_set']
+df_merged = pd.merge(df_merged, df4, on=['stay_id', 'subject_id'], how='inner')
 df_temp = df_merged
 df_merged = df_merged.drop(columns=['subject_id'])
 df_merged.insert(0, 'subject_id', df_temp['subject_id'])
-df_merged['RSBI'] = df_merged['tidal_volume_observed']/df_merged['respiratory_rate_set']
+
 
 merge_data = './data/merged_data.csv'
 df_merged.to_csv(merge_data, index=False)
