@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import csv
 import math
-
+from sklearn.linear_model import LinearRegression
+from sklearn.impute import KNNImputer
 data_basic = './data/gender_race_admission_type_charttime_fio2_plateaupressure.csv'
 data_basic2 = './data/basic_data2.csv'
 data_O2 = './data/O2_flow.csv'
@@ -35,6 +36,7 @@ df1['charttime'] = pd.to_datetime(df1['charttime'])
 df1 = df1.sort_values(by=['stay_id', 'charttime'])
 df1 = df1.set_index('charttime')
 df_resampled1 = df1.groupby('stay_id').resample('H').max()
+df_resampled1['O2_flow'].replace('___', pd.NA, inplace=True)
 df_resampled1['O2_flow'] = df_resampled1['O2_flow'].fillna(method='ffill')
 df_resampled1 = df_resampled1.drop(columns='stay_id')
 df_resampled1 = df_resampled1.reset_index()
@@ -56,6 +58,11 @@ df_resampled2 = df_resampled2.reset_index()
 df_resampled2['subject_id'] = df_resampled2.groupby('stay_id')['subject_id'].fillna(method='ffill')
 
 df3 = data_basic2_datalist
+imputer = KNNImputer(n_neighbors=2) 
+df3[['max_height', 'max_weight']] = imputer.fit_transform(df3[['max_height', 'max_weight']])
+
+
+
 df4 = pd.DataFrame()
 df4['subject_id']= data_GT_datalist['subject_id']
 df4['stay_id'] = data_GT_datalist['stay_id']
@@ -70,6 +77,10 @@ df_merged = pd.merge(df_merged, df4, on=['stay_id', 'subject_id'], how='inner')
 df_temp = df_merged
 df_merged = df_merged.drop(columns=['subject_id'])
 df_merged.insert(0, 'subject_id', df_temp['subject_id'])
+
+
+df_merged['max_height'].fillna(df_merged.groupby('gender')['max_height'].transform('mean'), inplace=True)
+df_merged['max_weight'].fillna(df_merged.groupby('gender')['max_weight'].transform('mean'), inplace=True)
 
 
 merge_data = './data/merged_data.csv'
